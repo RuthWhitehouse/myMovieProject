@@ -1,5 +1,5 @@
 -- Questions to ask:
--- How does a movie from the early career of a director/star/writer gross compared to the most recent?
+-- Does a director's movie gross more later on in their career?
 -- Do older movies receive higher or lower ratings than newer movies?
 -- Do movies in a certain quarter perform better than others?
 -- What country averages the highest revenue?
@@ -13,7 +13,7 @@ HAVING COUNT(director) > 1
 ORDER BY numberofmovies desc
 
 -- Deleting rows that interfere with some queries later. They were null values from the original dataset
-DELETE FROM movies
+DELETE FROM personalProjects..movies
 WHERE releaseDate = 'January 1, 0000'
 
 -- Seeing the earliest and the latest movie
@@ -23,42 +23,82 @@ GROUP BY director
 HAVING COUNT(director) > 1
 
 -- Creating a table to hold this data
--- CONSIDER CHANGING THIS TO A VIEW?
--- THIS SECTION NEEDS TO CHANGE AS WELL (NEED TO SWITCH TO RELEASE DATE)
-DROP TABLE IF EXISTS directorYears
-CREATE TABLE directorYears 
+-- Will need to create several tables to be able query the data and display it as desired
+DROP TABLE IF EXISTS directorFolio
+CREATE TABLE directorFolio
 (
 	director varchar(256),
-	earlyYear int,
-	lastYear int
+	earlyDate date,
+	lastDate date
 )
 
-INSERT INTO directorYears
-SELECT director, MIN(correctYear) AS earliestMovie, MAX(correctYear) AS latestMovie
+INSERT INTO directorFolio
+SELECT director, MIN(CAST(releaseDate AS date)) AS earlyDate, MAX(CAST(releaseDate AS date)) AS lastDate
 FROM personalProjects..movies
 GROUP BY director
-HAVING COUNT(director) > 1 AND MIN(correctYear) > 0
+HAVING COUNT(director) > 1
 
--- Because of the results below, I AM GOING TO WANT TO GO BACK AND BASE IT OFF OF THE FULL RELEASE DATE
-SELECT a.director, a.earlyYear, b.name
-FROM directorYears AS a
-INNER JOIN movies AS b
+-- Seeing the earliest movie a director put out
+SELECT a.director, a.earlyDate, b.name, b.gross
+FROM directorFolio AS a
+INNER JOIN personalProjects..movies AS b
 	ON a.director = b.director
-WHERE a.director = 'Stanley Kubrick'
+WHERE a.earlyDate = b.releaseDate
+ORDER BY director 
 
+-- Creating a table for this info
+DROP TABLE IF EXISTS earlyMovie
+CREATE TABLE earlyMovie
+(
+	director varchar(256),
+	releaseDate date,
+	name varchar(256),
+	gross int
+)
 
+INSERT INTO earlyMovie
+SELECT b.director, a.releaseDate, a.name, a.gross
+FROM personalProjects..movies a
+	FULL JOIN personalProjects..directorFolio b
+	ON a.director = b.director
+	WHERE b.earlyDate = releaseDate
 
+-- Seeing the most recent movie a director put out
+SELECT a.director, a.lastDate, b.name, b.gross
+FROM directorFolio AS a
+INNER JOIN personalProjects..movies AS b
+	ON a.director = b.director
+WHERE a.lastDate = b.releaseDate
+ORDER BY director
 
+-- Creating a table for this info
+DROP TABLE IF EXISTS lastMovie
+CREATE TABLE lastMovie
+(
+	director varchar(256),
+	releaseDate date,
+	name varchar(256),
+	gross int
+)
 
+INSERT INTO lastMovie
+SELECT b.director, a.releaseDate, a.name, a.gross
+FROM personalProjects..movies a
+	FULL JOIN personalProjects..directorFolio b
+	ON a.director = b.director
+	WHERE b.lastDate = releaseDate
 
-----Checking a director's average gross
---SELECT director, ROUND(avg(gross),2) AS averageGross
---FROM personalProjects..movies
---GROUP BY director
---ORDER BY averageGross desc
+-- Now to answer the question:
+-- Does a director's movie gross more later on in their career?
+SELECT a.director, (b.gross - a.gross) AS grossDifference
+FROM personalProjects..earlyMovie a
+	FULL JOIN personalProjects..lastMovie b
+	ON a.director = b.director
+ORDER BY grossDifference DESC
 
-----Checking a star's average gross
---SELECT star, ROUND(avg(gross),2) AS averageGross
---FROM personalProjects..movies
---GROUP BY star
---ORDER BY averageGross desc
+-- Now to create a view for later visualization
+CREATE VIEW directorGrowth AS
+SELECT a.director, (b.gross - a.gross) AS grossDifference
+FROM personalProjects..earlyMovie a
+	FULL JOIN personalProjects..lastMovie b
+	ON a.director = b.director
