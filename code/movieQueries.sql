@@ -2,7 +2,7 @@
 -- Questions to ask:
 -- Does a director's movie gross more later on in their career?
 -- How does score change over time?
--- Do movies in a certain quarter perform better than others?
+-- What quarter of the year has the heighest average grossing movies?
 -- What country averages the highest revenue?
 
 ----- Setup -----
@@ -59,4 +59,28 @@ WHERE correctYear <> 0
 GROUP BY correctYear
 
 ----- Third Question -----
--- Do movies in a certain quarter perform better than others?
+-- What quarter of the year has the heighest average grossing movies?
+CREATE VIEW quarterGross AS
+SELECT 
+	CASE
+		WHEN MONTH(releaseDate) IN (1,2,3) THEN 'Q1'
+		WHEN MONTH(releaseDate) IN (4,5,6) THEN 'Q2'
+		WHEN MONTH(releaseDate) IN (7,8,9) THEN 'Q3'
+		WHEN MONTH(releaseDate) IN (10,11,12) THEN 'Q4'
+	END AS quarter,
+	ROUND(AVG(gross), 2) AS averageGross
+FROM myMovieProject..movies
+GROUP BY 
+	CASE
+		WHEN MONTH(releaseDate) IN (1,2,3) THEN 'Q1'
+		WHEN MONTH(releaseDate) IN (4,5,6) THEN 'Q2'
+		WHEN MONTH(releaseDate) IN (7,8,9) THEN 'Q3'
+		WHEN MONTH(releaseDate) IN (10,11,12) THEN 'Q4'
+	END
+
+----- Fourth Question -----
+-- What country averages the highest revenue?
+CREATE VIEW grossByCountry AS
+SELECT country, ROUND(AVG(gross), 2) AS averageGross
+FROM myMovieProject..movies
+GROUP BY country
