@@ -1,26 +1,20 @@
+-- For all questions, create a view for later visualization purposes
 -- Questions to ask:
 -- Does a director's movie gross more later on in their career?
--- Do older movies receive higher or lower ratings than newer movies?
+-- How does score change over time?
 -- Do movies in a certain quarter perform better than others?
 -- What country averages the highest revenue?
 
+----- Setup -----
 USE myMovieProject
-
------ First question -----
--- Does a director's movie gross more later on in their career?
--- Picking directors that have at least 2 movies in the database
-SELECT director, COUNT(director) AS numberofmovies
-FROM myMovieProject..movies
-GROUP BY director
-HAVING COUNT(director) > 1
-ORDER BY numberofmovies desc
 
 -- Deleting rows that interfere with some queries later. They were null values from the original dataset
 DELETE FROM myMovieProject..movies
 WHERE releaseDate = 'January 1, 0000'
 
+----- First question -----
+-- Does a director's movie gross more later on in their career?
 -- Seeing the difference in gross between the earliest and the latest movie
--- At the same time, creating a view for this for later visualization purposes
 CREATE VIEW directorProgress AS
 WITH folioCTE (director, earlyDate, lastDate)
 AS
@@ -55,3 +49,14 @@ SELECT a.director, (b.gross - a.gross) AS grossDifference
 FROM firstCTE a
 	FULL JOIN lastCTE b
 	ON a.director = b.director
+
+----- Second Question -----
+-- How does score change over time?
+CREATE VIEW scoreByYear AS
+SELECT correctYear AS year, AVG(score) AS averageRating
+FROM myMovieProject..movies
+WHERE correctYear <> 0
+GROUP BY correctYear
+
+----- Third Question -----
+-- Do movies in a certain quarter perform better than others?
